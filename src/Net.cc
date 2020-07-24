@@ -32,7 +32,6 @@ extern "C" {
 #include "Reporter.h"
 #include "Scope.h"
 #include "Anon.h"
-#include "PacketDumper.h"
 #include "iosource/Manager.h"
 #include "iosource/PktSrc.h"
 #include "iosource/PktDumper.h"
