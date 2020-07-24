@@ -14,8 +14,8 @@
 BroSubstring::BroSubstring(const BroSubstring& bst)
 : zeek::String((const zeek::String&) bst), _num(), _new(bst._new)
 	{
-	for ( BSSAlignVecCIt it = bst._aligns.begin(); it != bst._aligns.end(); ++it )
-		_aligns.push_back(*it);
+	for ( const auto& align : bst._aligns )
+		_aligns.push_back(align);
 	}
 
 const BroSubstring& BroSubstring::operator=(const BroSubstring& bst)
@@ -24,8 +24,8 @@ const BroSubstring& BroSubstring::operator=(const BroSubstring& bst)
 
 	_aligns.clear();
 
-	for ( BSSAlignVecCIt it = bst._aligns.begin(); it != bst._aligns.end(); ++it )
-		_aligns.push_back(*it);
+	for ( const auto& align : bst._aligns )
+		_aligns.push_back(align);
 
 	_new = bst._new;
 
@@ -42,9 +42,9 @@ bool BroSubstring::DoesCover(const BroSubstring* bst) const
 	if ( _aligns.size() != bst->_aligns.size() )
 		return false;
 
-	BSSAlignVecCIt it_bst = bst->_aligns.begin();
+	auto it_bst = bst->_aligns.begin();
 
-	for ( BSSAlignVecCIt it = _aligns.begin(); it != _aligns.end(); ++it, ++it_bst )
+	for ( auto it = _aligns.begin(); it != _aligns.end(); ++it, ++it_bst )
 		{
 		const BSSAlign& a = *it;
 		const BSSAlign& a_bst = *it_bst;
@@ -132,9 +132,9 @@ char* BroSubstring::VecToString(Vec* vec)
 	{
 	std::string result("[");
 
-	for ( BroSubstring::VecIt it = vec->begin(); it != vec->end(); ++it )
+	for ( const auto& ss : *vec )
 		{
-		result += (*it)->CheckString();
+		result += ss->CheckString();
 		result += ",";
 		}
 
@@ -146,17 +146,14 @@ zeek::String::IdxVec* BroSubstring::GetOffsetsVec(const Vec* vec, unsigned int i
 	{
 	zeek::String::IdxVec* result = new zeek::String::IdxVec();
 
-	for ( VecCIt it = vec->begin(); it != vec->end(); ++it )
+	for ( const auto& bst : *vec )
 		{
-		int start, end;
-		const BroSubstring* bst = (*it);
-
 		if ( bst->_aligns.size() <= index )
 			continue;
 
 		const BSSAlign& align = bst->_aligns[index];
-		start = align.index;
-		end = start + bst->Len();
+		int start = align.index;
+		int end = start + bst->Len();
 
 		result->push_back(start);
 		result->push_back(end);
@@ -325,7 +322,7 @@ static void sw_collect_single(BroSubstring::Vec* result, SWNodeMatrix& matrix,
 // substrings are redundant (i.e., fully covered by a larger common substring).
 //
 static void sw_collect_multiple(BroSubstring::Vec* result,
-				SWNodeMatrix& matrix, SWParams& params)
+                                SWNodeMatrix& matrix, SWParams& params)
 	{
 	std::vector<BroSubstring::Vec*> als;
 
@@ -341,21 +338,16 @@ static void sw_collect_multiple(BroSubstring::Vec* result,
 			BroSubstring::Vec* new_al = new BroSubstring::Vec();
 			sw_collect_single(new_al, matrix, node, params);
 
-			for ( std::vector<BroSubstring::Vec*>::iterator it = als.begin();
-			      it != als.end(); ++it )
+			for ( auto& old_al : als )
 				{
-				BroSubstring::Vec* old_al = *it;
-
 				if ( old_al == nullptr )
 					continue;
 
-				for ( BroSubstring::VecIt it2 = old_al->begin();
-				      it2 != old_al->end(); ++it2 )
+				for ( const auto& old_ss : *old_al )
 					{
-					for ( BroSubstring::VecIt it3 = new_al->begin();
-					      it3 != new_al->end(); ++it3 )
+					for ( const auto& new_ss : *new_al )
 						{
-						if ( (*it2)->DoesCover(*it3) )
+						if ( old_ss->DoesCover(new_ss) )
 							{
 							delete_each(new_al);
 							delete new_al;
@@ -363,11 +355,11 @@ static void sw_collect_multiple(BroSubstring::Vec* result,
 							goto end_loop;
 							}
 
-						if ( (*it3)->DoesCover(*it2) )
+						if ( new_ss->DoesCover(old_ss) )
 							{
 							delete_each(old_al);
 							delete old_al;
-							*it = 0;
+							old_al = nullptr;
 							goto end_loop;
 							}
 						}
@@ -380,17 +372,13 @@ end_loop:
 			}
 		}
 
-	for ( std::vector<BroSubstring::Vec*>::iterator it = als.begin();
-	      it != als.end(); ++it )
+	for ( const auto& al : als )
 		{
-		BroSubstring::Vec* al = *it;
-
 		if ( al == nullptr )
 			continue;
 
-		for ( BroSubstring::VecIt it2 = al->begin();
-		      it2 != al->end(); ++it2 )
-			result->push_back(*it2);
+		for ( const auto& bst : *al )
+			result->push_back(bst);
 
 		delete al;
 		}
